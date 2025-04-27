@@ -1,0 +1,85 @@
+# SwiftLint configuration
+# To enable/disable a rule, uncomment or add its identifier under disabled_rules or opt_in_rules.
+# Full list: https://github.com/realm/SwiftLint#rules
+
+disabled_rules: # rule identifiers to disable entirely
+  # - line_length
+  # - trailing_whitespace
+  # - vertical_whitespace
+  # - todo
+  # - force_cast
+  # - force_try
+  # - force_unwrapping
+
+opt_in_rules:  # rules disabled by default that you can enable
+  # - anyobject_protocol
+  # - attributes
+  # - empty_count
+  # - explicit_init
+  # - explicit_self
+  # - first_where
+  # - for_where
+  # - implicit_return
+  # - no_extension_access_modifier
+  # - pattern_matching_keywords
+  # - sorted_imports
+
+# Include/Exclude paths (relative to repo root)
+included: # paths to include during linting. By default, everything is included.
+  # - Sources
+  # - Tests
+
+excluded: # paths to ignore during linting
+  - Carthage
+  - Pods
+  - .build
+  - fastlane
+  - Scripts
+
+# Customize individual rule thresholds
+line_length:
+  warning: 120
+  error: 150
+  ignores_comments: true
+  ignores_interpolated_strings: true
+
+type_body_length:
+  warning: 200
+  error: 300
+
+file_length:
+  warning: 400
+  error: 600
+
+# Reporter (xcode, json, csv, checkstyle)
+reporter: xcode
+
+# Whitelist/Blacklist regex for file names
+file_name:
+  min_length: 3
+  max_length: 40
+  excluded: # regex patterns of filenames to ignore
+    - "Tests.swift$"
+    - ".*Mock.swift$"
+
+# Custom rules (regex): you can define your own checks
+custom_rules:
+  no_print_debug:
+    regex: 'print\('
+    message: "Don't leave `print(...)` calls in production code."
+    severity: warning
+
+  todo_comment:
+    regex: '(//|/\*)\s*TODO\b'
+    message: "Remove TODO comments before merging."
+    severity: error
+
+# Optional: if you want SwiftLint to autocorrect some issues
+autocorrect: true
+
+# ------------------------------------------------------------------------------
+# Example usage:
+# 1. Uncomment the rules you want under disabled_rules or opt_in_rules.
+# 2. Tweak thresholds (e.g. line_length) as your codebase grows.
+# 3. Add or remove directories in included/excluded as needed.
+# ------------------------------------------------------------------------------
