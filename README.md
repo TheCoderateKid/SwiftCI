@@ -198,4 +198,3 @@ Drop and customize these two files to enforce consistent formatting and linting 
 ## 📄 License
 
 This project is licensed under the **MIT License**. See [LICENSE](LICENSE) for details.  
-```
