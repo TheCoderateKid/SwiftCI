@@ -1,13 +1,15 @@
-[![Jenkins Build Status](https://img.shields.io/jenkins/build?job=YourJenkinsJobName&style=flat-square&logo=jenkins)](https://jenkins.example.com/job/YourJenkinsJobName/)
-[![Swift 5.9+](https://img.shields.io/badge/swift-5.9%2B-orange?style=flat-square&logo=swift)](https://swift.org)
-[![Platforms](https://img.shields.io/badge/platforms-iOS%20%7C%20macOS%20%7C%20tvOS%20%7C%20watchOS-blue?style=flat-square)]()
-[![License: MIT](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
-[![GitHub Release](https://img.shields.io/github/v/release/thecoderatekid/SwiftCI?style=flat-square)](https://github.com/yourusername/SwiftCI/releases)
+[![Jenkins Build Status](https://img.shields.io/jenkins/build?job=YourJenkinsJobName&style=flat-square&logo=jenkins)](https://jenkins.example.com/job/YourJenkinsJobName/)  
+[![Swift 5.9+](https://img.shields.io/badge/swift-5.9%2B-orange?style=flat-square&logo=swift)](https://swift.org)  
+[![Platforms](https://img.shields.io/badge/platforms-iOS%20%7C%20macOS%20%7C%20tvOS%20%7C%20watchOS-blue?style=flat-square)]()  
+[![License: MIT](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)  
+[![GitHub Release](https://img.shields.io/github/v/release/thecoderatekid/SwiftCI?style=flat-square)](https://github.com/thecoderatekid/SwiftCI/releases)  
 
 # SwiftCI
 
 A **dynamic, cross-platform** Jenkins Declarative Pipeline for Swift projects.  
 Automatically detects Swift Package Manager packages, Xcode workspaces, or Xcode projects and runs formatting, linting, building, and testing across **iOS**, **macOS**, **tvOS**, **watchOS**, and **Swift Package** targets.
+
+**Maintainer:** [TheCoderatekid](https://github.com/thecoderatekid)  
 
 ---
 
@@ -41,6 +43,7 @@ Continuous Integration is crucial to maintain code quality, catch regressions ea
   - [Configuration](#configuration)  
 - [Pipeline Stages](#pipeline-stages)  
 - [Customizing](#customizing)  
+  - [Custom Lint Configuration](#custom-lint-configuration)  
 - [Contributing](#contributing)  
 - [License](#license)  
 
@@ -57,7 +60,7 @@ Continuous Integration is crucial to maintain code quality, catch regressions ea
 
 ### Installation
 
-1. **Create a new repo** named `SwiftCI` (or copy this Jenkinsfile into your existing project).
+1. **Create a new repo** named `SwiftCI` (or copy this `Jenkinsfile` into your existing project).
 2. Add the `Jenkinsfile` at the repository root.
 3. Push to your Git server and configure a Jenkins job pointing at this repo.
 
@@ -92,7 +95,7 @@ environment {
    Installs Xcode CLI Tools, Homebrew, SwiftFormat, and SwiftLint if they’re missing.
 
 4. **Format & Lint**  
-   - `swiftformat . --lint` (with `--disable trailingCommas`)  
+   - `swiftformat . --lint --disable trailingCommas --swiftversion 5.9`  
    - `swiftlint lint --strict`  
 
 5. **SwiftPM Build & Test**  
@@ -112,7 +115,73 @@ environment {
 
 - **Additional Schemes**: The pipeline picks up _all_ shared schemes under `xcshareddata/xcschemes`.  
 - **Additional Platforms**: Add new `DEST` environment variables and adjust the SDK-selection logic based on scheme naming.  
-- **Custom Lint Rules**: Drop a `.swiftformat` or `.swiftlint.yml` in your repo root to tweak formatting and linting.
+
+### Custom Lint Configuration
+
+SwiftCI comes bundled with two fully-commented template files to help you lock in your team’s code style. Drop them in your repo root and **uncomment** or **tweak** the settings you want.  
+
+#### `.swiftformat`
+
+A comment-rich config for [SwiftFormat](https://github.com/nicklockwood/SwiftFormat#options).  
+Copy this file to your repo as **`.swiftformat`**, then:
+
+- **Uncomment** any `--option` lines to enable or override defaults.  
+- **Disable rules** with `--disable <rule1>,<rule2>` (e.g. `--disable trailingCommas`).  
+- **Set version** via `--swiftversion 5.9` to align formatting with your Swift version.
+
+```text
+# SwiftFormat configuration (uncomment to enable)
+#--maxwidth 100
+#--indent 4
+#--wraparguments beforefirst
+#--wrapelements beforefirst
+#--semicolons remove
+#--commas insert
+#--disable trailingCommas, redundantSelf
+--swiftversion 5.9
+```
+
+#### `.swiftlint.yml`
+
+A sample [SwiftLint](https://github.com/realm/SwiftLint#rules) YAML config.  
+Copy to **`.swiftlint.yml`** at your repo root, then:
+
+- Add rule identifiers under `disabled_rules:` to turn them off.  
+- Add rule identifiers under `opt_in_rules:` to enable opt-in checks (e.g. `sorted_imports`).  
+- Tweak thresholds (`line_length`, `file_length`, etc.).  
+- Define `included:` / `excluded:` paths.  
+- Use `custom_rules:` to add your own regex-based checks.
+
+```yaml
+disabled_rules:
+  # - line_length
+  # - force_unwrapping
+
+opt_in_rules:
+  # - sorted_imports
+
+included:
+  # - Sources
+
+excluded:
+  - Carthage
+  - Pods
+  - .build
+
+line_length:
+  warning: 120
+  error: 150
+
+reporter: xcode
+
+custom_rules:
+  no_print_debug:
+    regex: 'print\('
+    message: "Remove debug `print(...)` calls."
+    severity: warning
+```
+
+Drop and customize these two files to enforce consistent formatting and linting across your entire team—no changes to the `Jenkinsfile` required.
 
 ---
 
