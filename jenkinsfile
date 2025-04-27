@@ -1,0 +1,161 @@
+pipeline {
+  agent { label 'macos' }
+
+  environment {
+    SWIFT_VERSION    = '5.9'
+    IOS_DEST         = 'platform=iOS Simulator,name=iPhone 14,OS=17.4'
+    TVOS_DEST        = 'platform=tvOS Simulator,name=Apple TV 4K (2nd generation),OS=17.4'
+    WATCHOS_DEST     = 'platform=watchOS Simulator,name=Apple Watch Series 9 - 45mm,OS=10.4'
+    MACOS_SDK        = 'macosx'
+
+    HAS_PACKAGE      = 'false'
+    HAS_WORKSPACE    = 'false'
+    HAS_PROJECT      = 'false'
+  }
+
+  stages {
+    stage('🔄 Checkout') {
+      steps {
+        script {
+          echo "🔄 About to checkout repository:"
+          echo "    • URL:    ${env.GIT_URL}"
+          echo "    • Branch: ${env.GIT_BRANCH}"
+          echo "    • Commit: ${env.GIT_COMMIT}"
+        }
+        checkout scm
+      }
+    }
+
+    stage('🔍 Detect Project Type') {
+      steps {
+        script {
+          env.HAS_PACKAGE   = fileExists('Package.swift')                 ? 'true' : 'false'
+          env.HAS_WORKSPACE = !findFiles(glob: '*.xcworkspace').isEmpty() ? 'true' : 'false'
+          env.HAS_PROJECT   = !findFiles(glob: '*.xcodeproj').isEmpty()   ? 'true' : 'false'
+          echo "🔍 Detected → SwiftPM: ${env.HAS_PACKAGE}, Workspace: ${env.HAS_WORKSPACE}, Project: ${env.HAS_PROJECT}"
+        }
+      }
+    }
+
+    stage('🛠️ Ensure Tools') {
+      steps {
+        echo "🛠️ Ensuring SwiftFormat & SwiftLint..."
+        sh '''
+          if ! xcode-select -p &>/dev/null; then
+            echo "⏳ Installing Xcode CLI tools..."
+            xcode-select --install || true
+          fi
+
+          if ! command -v brew &>/dev/null; then
+            echo "⏳ Installing Homebrew..."
+            /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+          fi
+
+          brew update || true
+
+          if ! command -v swiftformat &>/dev/null; then
+            echo "🛠️ Installing SwiftFormat..."
+            brew install swiftformat
+          fi
+
+          if ! command -v swiftlint &>/dev/null; then
+            echo "🛠️ Installing SwiftLint..."
+            brew install swiftlint
+          fi
+        '''
+      }
+    }
+
+    stage('🧹 Format & Lint') {
+      steps {
+        echo "🧹 Running SwiftFormat lint..."
+        sh "swiftformat . --disable trailingCommas --lint --swiftversion ${SWIFT_VERSION}"
+        echo "⚙️ Running SwiftLint..."
+        sh "swiftlint lint --strict"
+      }
+    }
+
+    stage('📦 SwiftPM Build & Test') {
+      when { expression { env.HAS_PACKAGE == 'true' } }
+      steps {
+        echo "📦 Building Swift Package..."
+        sh "swift build --disable-sandbox"
+        echo "✅ Testing Swift Package..."
+        sh "swift test --disable-sandbox"
+      }
+    }
+
+    stage('🚀 Xcode Build & Test') {
+      when { expression { env.HAS_WORKSPACE == 'true' || env.HAS_PROJECT == 'true' } }
+      steps {
+        script {
+          echo "🚀 Starting Xcode workflows..."
+
+          // determine target type/name
+          def (targetType, targetName) = env.HAS_WORKSPACE.toBoolean()
+            ? ['workspace', findFiles(glob: '*.xcworkspace')[0].name]
+            : ['project',  findFiles(glob: '*.xcodeproj')[0].name]
+          echo "📂 Using ${targetType}: ${targetName}"
+
+          // locate shared schemes
+          def schemeDir = targetType == 'workspace'
+            ? "${targetName.replace('.xcworkspace','')}.xcodeproj/xcshareddata/xcschemes"
+            : "${targetName}/xcshareddata/xcschemes"
+          def schemes = findFiles(glob: "${schemeDir}/*.xcscheme")
+          if (!schemes) {
+            error "❌ No shared schemes found under ${schemeDir}"
+          }
+
+          schemes.each { f ->
+            def scheme = f.name.replace('.xcscheme','')
+            echo "🔖 Scheme: ${scheme}"
+
+            // pick SDK & destination based on scheme name
+            def lc = scheme.toLowerCase()
+            def sdkArg, destArg
+            if (lc.contains('ios')) {
+              sdkArg  = '-sdk iphonesimulator'
+              destArg = "-destination '${IOS_DEST}'"
+            } else if (lc.contains('tvos')) {
+              sdkArg  = '-sdk appletvsimulator'
+              destArg = "-destination '${TVOS_DEST}'"
+            } else if (lc.contains('watchos')) {
+              sdkArg  = '-sdk watchsimulator'
+              destArg = "-destination '${WATCHOS_DEST}'"
+            } else {
+              sdkArg  = "-sdk ${MACOS_SDK}"
+              destArg = ''
+            }
+
+            echo "🔨 Building ${scheme} (${sdkArg})..."
+            sh """
+              xcodebuild clean build \
+                -${targetType} ${targetName} \
+                -scheme ${scheme} ${sdkArg} | tee ${scheme}_build.log
+            """
+
+            if (destArg) {
+              echo "🧪 Testing ${scheme} (${destArg})..."
+              sh """
+                xcodebuild test \
+                  -${targetType} ${targetName} \
+                  -scheme ${scheme} ${sdkArg} ${destArg} \
+                  | xcpretty --test | tee ${scheme}_test.log
+              """
+            } else {
+              echo "⚠️ Skipping tests for ${scheme} (no simulator destination)"
+            }
+          }
+        }
+      }
+    }
+  }
+
+  post {
+    always {
+      echo "📁 Archiving logs..."
+      archiveArtifacts artifacts: '*_build.log,*_test.log', allowEmptyArchive: true
+      junit '**/TestResults/**/*.xml'
+    }
+  }
+}
