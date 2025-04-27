@@ -1,0 +1,58 @@
+# SwiftFormat configuration
+# To enable a rule, remove the leading '#' from the line.
+# For full list of options, see: https://github.com/nicklockwood/SwiftFormat#options
+
+# --maxwidth <n>          Wrap lines longer than this (default 100)
+#--maxwidth 120
+
+# --indent <n>            Number of spaces to use for indentation (default 4)
+#--indent 2
+
+# --header ignore         Ignore file headers
+#--header strip
+
+# --allman                Use Allman braces style
+#--allman
+
+# --wraparguments         How to wrap argument lists: beforefirst, afterfirst, preserve, disabled
+#--wraparguments beforefirst
+
+# --wrapelements          How to wrap array/dictionary literals
+#--wrapelements beforefirst
+
+# --semicolons            Remove or insert semicolons (insert, remove)
+#--semicolons remove
+
+# --commas                How to wrap commas: insert, remove, preserve
+#--commas insert
+
+# --operatorfunc decide   Decide whether to insert whitespace around operators automatically
+#--operatorfunc spaced
+
+# --octalliteral          Convert integer literals to octal
+#--octalliteral remove
+
+# --hexliteral            Convert integer literals to hexadecimal
+#--hexliteral remove
+
+# --disable <rule1>,<rule2>  Disable one or more rules by name
+#--disable trailingCommas, redundantSelf
+
+# --enable <rule1>,<rule2>   Enable one or more rules even if disabled by default
+#--enable sortedImports, wrapComments
+
+# --swiftversion <version>   Assume a given Swift language version for parsing
+--swiftversion 5.9
+
+# ------------------------------------------------------------------------------
+# Example “starter” configuration you might uncomment as-is:
+# ------------------------------------------------------------------------------
+#--maxwidth 100
+#--indent 4
+#--wraparguments beforefirst
+#--wrapelements beforefirst
+#--semicolons remove
+#--commas insert
+#--disable trailingCommas
+#--disable redundantSelf
+#--enable sortedImports
